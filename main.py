@@ -290,74 +290,7 @@ class QueryCache:
             del self.cache[oldest_key]
 
 # -------------------------
-# 10. SUMMARY FUNCTION
-# -------------------------
-def summarize_document(chunks, model, max_chunks=3):
-    """Create a simple summary from chunks"""
-    try:
-        text_parts = []
-        for chunk in chunks[:max_chunks]:
-            text = chunk.page_content[:500]
-            text_parts.append(text)
-        
-        text_to_summarize = " ".join(text_parts)
-        prompt = f"Summarize this text in 3-4 sentences:\n\n{text_to_summarize}"
-        
-        response = model.invoke(prompt)
-        
-        summary = ""
-        if hasattr(response, 'content'):
-            content = response.content
-            if isinstance(content, list) and len(content) > 0:
-                if isinstance(content[0], dict):
-                    summary = content[0].get('text', str(content[0]))
-                else:
-                    summary = str(content[0])
-            elif isinstance(content, str):
-                summary = content
-            else:
-                summary = str(content)
-        else:
-            summary = str(response)
-        
-        summary = str(summary).strip()
-        prefixes = ["Summary:", "Here is a summary:", "The text is about:", "Summary of the text:"]
-        for prefix in prefixes:
-            if summary.lower().startswith(prefix.lower()):
-                summary = summary[len(prefix):].strip()
-                break
-        
-        if summary:
-            summary = summary[0].upper() + summary[1:]
-            if not summary.endswith("."):
-                summary += "."
-        
-        return summary if summary else "No summary could be generated."
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return "Could not generate summary."
-
-# -------------------------
-# 11. LOGGING
-# -------------------------
-class SimpleLogger:
-    def __init__(self):
-        self.logs = []
-    
-    def log(self, message, level="INFO"):
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_entry = f"[{timestamp}] {level}: {message}"
-        self.logs.append(log_entry)
-        print(log_entry)
-    
-    def save_logs(self, filename="chatbot_log.txt"):
-        with open(filename, 'w') as f:
-            f.write("\n".join(self.logs))
-        print(f"✅ Logs saved to {filename}")
-
-# -------------------------
-# 12. SANITIZE INPUT
+# 10. SANITIZE INPUT
 # -------------------------
 def sanitize_input(text):
     text = text.replace('<', '').replace('>', '').replace('{', '').replace('}', '')
@@ -366,7 +299,7 @@ def sanitize_input(text):
     return text
 
 # -------------------------
-# 13. MAIN APPLICATION
+# 11. MAIN APPLICATION
 # -------------------------
 def main():
     print("="*50)
@@ -374,7 +307,6 @@ def main():
     print("="*50)
     
     # Setup
-    logger = SimpleLogger()
     cache = QueryCache()
     chat_history = []
     
@@ -384,17 +316,14 @@ def main():
         return
     
     # 2. Load PDF
-    logger.log(f"Loading {pdf_path}")
     documents = load_pdf(pdf_path)
     if not documents:
         return
     
     # 3. Split documents
-    logger.log("Splitting documents...")
     chunks = split_documents(documents)
     
     # 4. Setup embeddings
-    logger.log("Loading embeddings...")
     embeddings = get_embeddings()
     if embeddings is None:
         print("❌ Could not load embeddings. Please install sentence-transformers")
@@ -402,7 +331,6 @@ def main():
         return
     
     # 5. Setup vector store
-    logger.log("Setting up vector store...")
     try:
         vector_store = get_vector_store(embeddings, chunks)
     except Exception as e:
@@ -410,7 +338,6 @@ def main():
         return
     
     # 6. Setup model
-    logger.log("Loading model...")
     try:
         model = get_model()
     except Exception as e:
@@ -445,7 +372,6 @@ def main():
     print("✅ Chatbot is ready!")
     print("Commands:")
     print("  - Type your question to ask")
-    print("  - 'summary' for document summary")
     print("  - 'history' to see chat history")
     print("  - 'clear' to clear history")
     print("  - 'exit' to quit")
@@ -458,11 +384,6 @@ def main():
         if query.lower() == 'exit':
             print("👋 Goodbye!")
             break
-        
-        if query.lower() == 'summary':
-            summary = summarize_document(chunks, model)
-            print(f"\n📝 Document Summary:\n{summary}")
-            continue
         
         if query.lower() == 'history':
             if not chat_history:
@@ -508,9 +429,6 @@ def main():
                 print(f"❌ API Quota exceeded. Please wait a few minutes.")
             else:
                 print(f"❌ Error: {e}")
-            logger.log(f"Error: {e}", "ERROR")
-    
-    logger.save_logs()
 
 if __name__ == "__main__":
     main()
