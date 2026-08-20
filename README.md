@@ -20,10 +20,11 @@ content.
 
 ```
 .
-├── main.py             # RAG pipeline (loading, chunking, embeddings, retrieval, chat)
-├── server.py            # FastAPI wrapper exposing /upload and /chat
-├── index.html            # Frontend UI
-├── requirements.txt      # Python dependencies
+├── .env.environment           # Environment variables (API keys, settings)
+├── main.py                    # RAG pipeline (loading, chunking, embeddings, retrieval, chat)
+├── server.py                  # FastAPI wrapper exposing /upload and /chat
+├── index.html                 # Frontend UI
+├── requirements.txt           # Python dependencies
 └── README.md
 ```
 
