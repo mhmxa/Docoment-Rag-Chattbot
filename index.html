@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Folio — Ask your documents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EDEFEA;
+    --paper-raised: #FFFFFF;
+    --ink: #17242D;
+    --ink-soft: #52626B;
+    --ink-faint: #8A97A0;
+    --line: #D7DBD2;
+    --accent: #2F6E62;
+    --accent-deep: #234F47;
+    --accent-wash: #E4EEE9;
+    --stamp: #C97C3D;
+    --stamp-wash: #F6E7D8;
+    --danger: #B4483B;
+    --radius: 3px;
+    --shadow-card: 0 1px 2px rgba(23,36,45,0.06), 0 1px 1px rgba(23,36,45,0.04);
+    --shadow-raised: 0 6px 20px rgba(23,36,45,0.10);
+    font-size: 16px;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
+  ::selection{ background: var(--accent); color: #fff; }
+
+  a{ color: var(--accent-deep); }
+
+  :focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button{ font-family: inherit; }
+
+  /* ---------- Shell ---------- */
+  .shell{
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    grid-template-rows: 64px 1fr;
+    grid-template-areas:
+      "brand topbar"
+      "sidebar main";
+    height: 100vh;
+  }
+
+  .brand{
+    grid-area: brand;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    background: var(--paper-raised);
+  }
+  .brand-mark{
+    width:26px; height:26px;
+    flex-shrink:0;
+  }
+  .brand-word{
+    font-family:'Source Serif 4', serif;
+    font-weight:700;
+    font-size: 1.28rem;
+    letter-spacing: -0.01em;
+  }
+  .brand-word em{
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .topbar{
+    grid-area: topbar;
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-raised);
+  }
+  .topbar-title{
+    display:flex;
+    flex-direction: column;
+    line-height: 1.15;
+  }
+  .topbar-title .doc-name{
+    font-weight:600;
+    font-size: 0.95rem;
+  }
+  .topbar-title .doc-meta{
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+  }
+
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-size: 0.72rem;
+    padding: 5px 10px 5px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    background: var(--paper);
+  }
+  .status-dot{
+    width:7px; height:7px; border-radius:50%;
+    background: var(--ink-faint);
+    flex-shrink:0;
+  }
+  .status-pill.ready .status-dot{ background: var(--accent); }
+  .status-pill.ready{ color: var(--accent-deep); border-color: var(--accent); background: var(--accent-wash); }
+  .status-pill.error .status-dot{ background: var(--danger); }
+  .status-pill.error{ color: var(--danger); border-color: var(--danger); }
+
+  .topbar-actions{ display:flex; align-items:center; gap:10px; }
+
+  .icon-btn{
+    width:34px; height:34px;
+    display:flex; align-items:center; justify-content:center;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--ink-soft);
+    cursor:pointer;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .icon-btn:hover{ border-color: var(--accent); color: var(--accent-deep); background: var(--accent-wash); }
+  .icon-btn svg{ width:16px; height:16px; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    grid-area: sidebar;
+    border-right: 1px solid var(--line);
+    background: var(--paper-raised);
+    overflow-y: auto;
+    padding: 20px;
+    display:flex;
+    flex-direction:column;
+    gap: 20px;
+  }
+
+  .sidebar-label{
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--ink-faint);
+    font-weight:600;
+    margin: 0 0 10px 2px;
+  }
+
+  .dropzone{
+    border: 1.5px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 26px 18px;
+    text-align:center;
+    cursor:pointer;
+    background: var(--paper);
+    transition: border-color .15s ease, background .15s ease;
+    position: relative;
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color: var(--accent);
+    background: var(--accent-wash);
+  }
+  .dropzone .dz-icon{
+    width:30px; height:30px;
+    margin: 0 auto 10px;
+    color: var(--ink-faint);
+  }
+  .dropzone.drag .dz-icon{ color: var(--accent); }
+  .dropzone .dz-title{
+    font-weight:600;
+    font-size: 0.86rem;
+    margin-bottom: 3px;
+  }
+  .dropzone .dz-sub{
+    font-size: 0.74rem;
+    color: var(--ink-faint);
+  }
+  .dropzone input[type=file]{
+    position:absolute; inset:0; opacity:0; cursor:pointer;
+  }
+
+  /* Catalog card — the signature element */
+  .catalog-card{
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+    padding: 14px 14px 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .catalog-card::before{
+    /* perforated stitch edge along the top, like an index card */
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:4px;
+    background-image: radial-gradient(circle, var(--line) 1px, transparent 1.2px);
+    background-size: 9px 4px;
+    background-repeat: repeat-x;
+    background-position: 4px 2px;
+  }
+  .catalog-row{
+    display:flex;
+    justify-content: space-between;
+    align-items:flex-start;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .catalog-name{
+    font-family:'Source Serif 4', serif;
+    font-weight:600;
+    font-size: 0.94rem;
+    line-height:1.25;
+    word-break: break-word;
+  }
+  .catalog-fields{
+    display:grid;
+    grid-template-columns: auto 1fr;
+    row-gap: 4px;
+    column-gap: 10px;
+    font-size: 0.72rem;
+  }
+  .catalog-fields dt{
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .catalog-fields dd{ margin:0; color: var(--ink-soft); }
+
+  .stamp{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    font-size: 0.66rem;
+    font-weight:600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 2px;
+    color: var(--stamp);
+    border: 1px solid var(--stamp);
+    background: var(--stamp-wash);
+    transform: rotate(-2deg);
+    flex-shrink:0;
+    opacity:0;
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  .stamp.show{ opacity:1; }
+
+  .scan-wrap{
+    position: relative;
+    height: 46px;
+    border-radius: 2px;
+    overflow:hidden;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    margin-bottom: 10px;
+  }
+  .scan-track{
+    position:absolute; inset:0;
+    display:flex; align-items:center;
+    padding: 0 10px;
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    gap:8px;
+  }
+  .scan-line{
+    position:absolute; top:0; bottom:0; width: 2px;
+    background: var(--accent);
+    left: -10%;
+    box-shadow: 0 0 10px 1px rgba(47,110,98,0.5);
+    animation: sweep 1.4s ease-in-out infinite;
+  }
+  @keyframes sweep{
+    0%{ left:-4%; }
+    50%{ left: 100%; }
+    100%{ left:-4%; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .scan-line{ animation: none; left: 50%; }
+  }
+
+  .catalog-empty{
+    border: 1px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 18px 14px;
+    text-align:center;
+    color: var(--ink-faint);
+    font-size: 0.78rem;
+    line-height:1.5;
+  }
+
+  .sidebar-footer{
+    margin-top:auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+
+  .settings-toggle{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    width:100%;
+    background:none;
+    border:none;
+    color: var(--ink-faint);
+    font-size: 0.72rem;
+    cursor:pointer;
+    padding: 4px 2px;
+  }
+  .settings-toggle:hover{ color: var(--ink-soft); }
+  .settings-toggle svg{ width:13px; height:13px; }
+
+  .settings-panel{
+    display:none;
+    margin-top:10px;
+    gap:8px;
+    flex-direction:column;
+  }
+  .settings-panel.open{ display:flex; }
+  .settings-panel label{
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+  }
+  .settings-panel input{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.76rem;
+    padding: 7px 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .settings-panel .hint{
+    font-size: 0.68rem;
+    color: var(--ink-faint);
+    line-height:1.5;
+  }
+
+  /* ---------- Main / chat ---------- */
+  .main{
+    grid-area: main;
+    display:flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--paper);
+  }
+
+  .messages{
+    flex:1;
+    overflow-y:auto;
+    padding: 28px 0 10px;
+    display:flex;
+    flex-direction:column;
+    gap: 18px;
+  }
+  .messages-inner{
+    max-width: 720px;
+    margin: 0 auto;
+    width:100%;
+    padding: 0 28px;
+    display:flex;
+    flex-direction:column;
+    gap: 18px;
+  }
+
+  .empty-state{
+    max-width: 480px;
+    margin: 8vh auto 0;
+    text-align:center;
+    padding: 0 24px;
+  }
+  .empty-state .stack{
+    width: 64px; height: 64px;
+    margin: 0 auto 18px;
+    color: var(--ink-faint);
+  }
+  .empty-state h1{
+    font-family:'Source Serif 4', serif;
+    font-weight:600;
+    font-size: 1.5rem;
+    margin: 0 0 8px;
+  }
+  .empty-state p{
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    line-height:1.6;
+    margin:0;
+  }
+
+  .msg{
+    display:flex;
+    gap:12px;
+    animation: rise .35s ease;
+  }
+  @media (prefers-reduced-motion: reduce){ .msg{ animation:none; } }
+  @keyframes rise{
+    from{ opacity:0; transform: translateY(6px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+  .msg-avatar{
+    width:26px; height:26px;
+    border-radius: 3px;
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Source Serif 4', serif;
+    font-weight:700;
+    font-size: 0.78rem;
+    margin-top: 2px;
+  }
+  .msg.user .msg-avatar{ background: var(--ink); color: var(--paper); }
+  .msg.assistant .msg-avatar{ background: var(--accent); color:#fff; }
+
+  .msg-body{ max-width: 78%; }
+  .msg.user{ flex-direction: row-reverse; }
+  .msg.user .msg-body{ text-align:right; margin-left:auto; }
+
+  .bubble{
+    display:inline-block;
+    text-align:left;
+    padding: 11px 14px;
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    line-height:1.55;
+  }
+  .msg.user .bubble{
+    background: var(--ink);
+    color: var(--paper);
+    border-top-right-radius: 2px;
+  }
+  .msg.assistant .bubble{
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-top-left-radius: 2px;
+  }
+  .msg.assistant .bubble.demo{
+    border-color: var(--stamp);
+  }
+  .demo-flag{
+    display:inline-block;
+    font-size: 0.62rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color: var(--stamp);
+    font-weight:600;
+    margin-bottom:6px;
+  }
+
+  .sources{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-top:9px;
+  }
+  .source-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    padding: 3px 8px;
+    border-radius: 2px;
+    background: var(--accent-wash);
+    color: var(--accent-deep);
+    border: 1px solid var(--line);
+    cursor:default;
+  }
+  .source-chip .tag{
+    font-weight:600;
+    background: var(--accent-deep);
+    color:#fff;
+    border-radius:1px;
+    padding: 0 4px;
+  }
+
+  .typing{
+    display:flex; gap:4px; padding: 4px 2px;
+  }
+  .typing span{
+    width:5px; height:5px; border-radius:50%;
+    background: var(--ink-faint);
+    animation: blink 1.1s infinite ease-in-out;
+  }
+  .typing span:nth-child(2){ animation-delay:.15s; }
+  .typing span:nth-child(3){ animation-delay:.3s; }
+  @keyframes blink{ 0%,80%,100%{ opacity:.25; } 40%{ opacity:1; } }
+
+  .composer{
+    border-top: 1px solid var(--line);
+    background: var(--paper-raised);
+    padding: 16px 28px 20px;
+  }
+  .composer-inner{
+    max-width: 720px;
+    margin:0 auto;
+  }
+  .composer-box{
+    display:flex;
+    align-items:flex-end;
+    gap:10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    padding: 8px 8px 8px 14px;
+    transition: border-color .15s ease;
+  }
+  .composer-box:focus-within{ border-color: var(--accent); }
+  .composer-box textarea{
+    flex:1;
+    border:none;
+    background:transparent;
+    resize:none;
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height:1.5;
+    color: var(--ink);
+    max-height: 140px;
+    padding: 6px 0;
+  }
+  .composer-box textarea:focus{ outline:none; }
+  .composer-box textarea::placeholder{ color: var(--ink-faint); }
+  .composer-box textarea:disabled{ color: var(--ink-faint); }
+
+  .send-btn{
+    width:36px; height:36px;
+    border-radius: var(--radius);
+    border:none;
+    background: var(--ink);
+    color: var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    transition: background .15s ease, opacity .15s ease;
+  }
+  .send-btn:hover{ background: var(--accent-deep); }
+  .send-btn:disabled{ opacity:.35; cursor:not-allowed; background: var(--ink); }
+  .send-btn svg{ width:15px; height:15px; }
+
+  .composer-hint{
+    font-size: 0.68rem;
+    color: var(--ink-faint);
+    margin: 8px 2px 0;
+  }
+
+  /* ---------- Scrollbars ---------- */
+  .sidebar::-webkit-scrollbar, .messages::-webkit-scrollbar{ width:8px; }
+  .sidebar::-webkit-scrollbar-thumb, .messages::-webkit-scrollbar-thumb{
+    background: var(--line); border-radius:4px;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 860px){
+    .shell{
+      grid-template-columns: 1fr;
+      grid-template-rows: 60px auto 1fr;
+      grid-template-areas:
+        "brand"
+        "topbar"
+        "main";
+    }
+    .sidebar{
+      grid-area: unset;
+      position: fixed;
+      top: 60px; left:0; right:0; bottom:0;
+      z-index: 20;
+      transform: translateX(-100%);
+      transition: transform .2s ease;
+      width: 82vw;
+      max-width: 340px;
+    }
+    .sidebar.open{ transform: translateX(0); box-shadow: var(--shadow-raised); }
+    .msg-body{ max-width: 88%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Brand -->
+  <header class="brand">
+    <button class="icon-btn" id="menuBtn" aria-label="Toggle document panel" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <svg class="brand-mark" viewBox="0 0 24 24" fill="none">
+      <path d="M5 3.5h11l3 3V20a.5.5 0 01-.5.5H5a.5.5 0 01-.5-.5V4a.5.5 0 01.5-.5z" stroke="#17242D" stroke-width="1.3"/>
+      <path d="M16 3.5v3h3" stroke="#17242D" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M7.5 12h9M7.5 15h6" stroke="#2F6E62" stroke-width="1.3" stroke-linecap="round"/>
+    </svg>
+    <span class="brand-word">Folio<em>.</em></span>
+  </header>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-title">
+      <span class="doc-name" id="topDocName">No document loaded</span>
+      <span class="doc-meta mono" id="topDocMeta">Upload a PDF to begin</span>
+    </div>
+    <div class="topbar-actions">
+      <span class="status-pill" id="statusPill"><span class="status-dot"></span><span id="statusText">Idle</span></span>
+      <button class="icon-btn" id="mobileMenuBtn" aria-label="Open document panel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div>
+      <p class="sidebar-label">Upload</p>
+      <div class="dropzone" id="dropzone">
+        <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 15V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div class="dz-title">Drop a PDF here</div>
+        <div class="dz-sub">or click to browse — one document at a time</div>
+        <input type="file" id="fileInput" accept="application/pdf">
+      </div>
+    </div>
+
+    <div>
+      <p class="sidebar-label">Document</p>
+      <div id="catalogArea">
+        <div class="catalog-empty" id="catalogEmpty">Nothing indexed yet. Uploaded documents appear here as a catalog card once processed.</div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="settings-toggle" id="settingsToggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 01-4 0v-.09A1.7 1.7 0 009 19.4a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-1.55-1H3a2 2 0 010-4h.09A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-1.55V3a2 2 0 014 0v.09a1.7 1.7 0 001 1.55 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06A1.7 1.7 0 0019.4 9c.14.36.4.66.75.84.14.07.3.12.46.14a1.7 1.7 0 011.55 1v0a2 2 0 010 4 1.7 1.7 0 00-1.55 1z"/></svg>
+        Backend connection
+      </button>
+      <div class="settings-panel" id="settingsPanel">
+        <label for="apiBaseInput">API base URL</label>
+        <input type="text" id="apiBaseInput" class="mono" value="http://localhost:8000" spellcheck="false">
+        <p class="hint">Folio expects <span class="mono">POST /upload</span> (multipart <span class="mono">file</span>) and <span class="mono">POST /chat</span> (JSON <span class="mono">{ question }</span> → <span class="mono">{ answer, sources }</span>). If the backend can't be reached, Folio falls back to a labeled demo answer so the interface stays usable.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="messages" id="messages">
+      <div class="empty-state" id="emptyState">
+        <svg class="stack" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.1">
+          <rect x="5" y="4" width="12" height="15" rx="0.5"/>
+          <rect x="7.5" y="2" width="12" height="15" rx="0.5" fill="var(--paper)"/>
+          <path d="M10 6h6M10 8.5h6M10 11h4" stroke-linecap="round"/>
+        </svg>
+        <h1>Ask your document anything</h1>
+        <p>Upload a PDF on the left. Once it's indexed, ask questions here — every answer is grounded in the source pages, cited inline.</p>
+      </div>
+
+      <div class="messages-inner" id="messagesInner" style="display:none;"></div>
+    </div>
+
+    <div class="composer">
+      <div class="composer-inner">
+        <div class="composer-box">
+          <textarea id="composerInput" rows="1" placeholder="Upload a document to start asking questions…" disabled></textarea>
+          <button class="send-btn" id="sendBtn" disabled aria-label="Send question">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke-linejoin="round" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <p class="composer-hint">Enter to send · Shift+Enter for a new line</p>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const state = {
+    apiBase: "http://localhost:8000",
+    documentReady: false,
+    docInfo: null,
+    busy: false
+  };
+
+  // ---------- Elements ----------
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const catalogArea = document.getElementById('catalogArea');
+  const catalogEmpty = document.getElementById('catalogEmpty');
+  const statusPill = document.getElementById('statusPill');
+  const statusText = document.getElementById('statusText');
+  const topDocName = document.getElementById('topDocName');
+  const topDocMeta = document.getElementById('topDocMeta');
+  const composerInput = document.getElementById('composerInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const messagesEl = document.getElementById('messages');
+  const messagesInner = document.getElementById('messagesInner');
+  const emptyState = document.getElementById('emptyState');
+  const settingsToggle = document.getElementById('settingsToggle');
+  const settingsPanel = document.getElementById('settingsPanel');
+  const apiBaseInput = document.getElementById('apiBaseInput');
+  const sidebar = document.getElementById('sidebar');
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+
+  apiBaseInput.value = state.apiBase;
+  apiBaseInput.addEventListener('change', () => {
+    state.apiBase = apiBaseInput.value.replace(/\/$/, '') || state.apiBase;
+  });
+
+  settingsToggle.addEventListener('click', () => settingsPanel.classList.toggle('open'));
+  mobileMenuBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+
+  // ---------- Status ----------
+  function setStatus(kind, text){
+    statusPill.className = 'status-pill' + (kind ? ' ' + kind : '');
+    statusText.textContent = text;
+  }
+
+  // ---------- Upload ----------
+  ['dragenter','dragover'].forEach(evt =>
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('drag'); })
+  );
+  ['dragleave','drop'].forEach(evt =>
+    dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag'); })
+  );
+  dropzone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    if (file) handleFile(file);
+    fileInput.value = '';
+  });
+
+  function formatBytes(bytes){
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/(1024*1024)).toFixed(1) + ' MB';
+  }
+
+  function renderProcessingCard(file){
+    catalogEmpty.style.display = 'none';
+    catalogArea.innerHTML = `
+      <div class="catalog-card" id="catalogCard">
+        <div class="scan-wrap">
+          <div class="scan-track">Reading &amp; chunking…</div>
+          <div class="scan-line"></div>
+        </div>
+        <div class="catalog-row">
+          <div class="catalog-name">${escapeHtml(file.name)}</div>
+          <span class="stamp" id="indexedStamp">Indexed</span>
+        </div>
+        <dl class="catalog-fields">
+          <dt>Size</dt><dd>${formatBytes(file.size)}</dd>
+          <dt>Pages</dt><dd id="fieldPages">—</dd>
+          <dt>Chunks</dt><dd id="fieldChunks">—</dd>
+          <dt>Uploaded</dt><dd>${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</dd>
+        </dl>
+      </div>`;
+  }
+
+  function completeCatalogCard(meta){
+    const scan = document.querySelector('.scan-wrap');
+    if (scan) scan.remove();
+    const stamp = document.getElementById('indexedStamp');
+    if (stamp) stamp.classList.add('show');
+    const pagesEl = document.getElementById('fieldPages');
+    const chunksEl = document.getElementById('fieldChunks');
+    if (pagesEl) pagesEl.textContent = meta.pages ?? '—';
+    if (chunksEl) chunksEl.textContent = meta.chunks ?? '—';
+  }
+
+  async function handleFile(file){
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setStatus('error', 'Not a PDF');
+      return;
+    }
+    state.documentReady = false;
+    state.busy = true;
+    renderProcessingCard(file);
+    setStatus('', 'Processing…');
+    topDocName.textContent = file.name;
+    topDocMeta.textContent = formatBytes(file.size) + ' · indexing…';
+    composerInput.disabled = true;
+    sendBtn.disabled = true;
+
+    const form = new FormData();
+    form.append('file', file);
+
+    try {
+      const res = await fetch(state.apiBase + '/upload', { method: 'POST', body: form });
+      if (!res.ok) throw new Error('Upload failed (' + res.status + ')');
+      const data = await res.json();
+      state.docInfo = data;
+      completeCatalogCard(data);
+      onDocumentReady(file, data);
+    } catch (err) {
+      // Backend not reachable — fall back to a usable demo mode
+      completeCatalogCard({ pages: '—', chunks: '—' });
+      onDocumentReady(file, { demo: true });
+      setStatus('error', 'Backend unreachable — demo mode');
+      return;
+    }
+  }
+
+  function onDocumentReady(file, meta){
+    state.documentReady = true;
+    state.busy = false;
+    if (!meta.demo) setStatus('ready', 'Indexed');
+    topDocMeta.textContent = formatBytes(file.size) + (meta.pages ? ' · ' + meta.pages + ' pages' : '') + (meta.demo ? ' · demo mode' : ' · ready');
+    composerInput.disabled = false;
+    composerInput.placeholder = 'Ask something about ' + file.name + '…';
+    sendBtn.disabled = false;
+    emptyState.style.display = 'none';
+    messagesInner.style.display = 'flex';
+    if (sidebar.classList.contains('open')) sidebar.classList.remove('open');
+  }
+
+  // ---------- Chat ----------
+  function escapeHtml(str){
+    return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function addMessage(role, html){
+    const wrap = document.createElement('div');
+    wrap.className = 'msg ' + role;
+    const initial = role === 'user' ? 'You' : 'F';
+    wrap.innerHTML = `
+      <div class="msg-avatar">${initial}</div>
+      <div class="msg-body">${html}</div>`;
+    messagesInner.appendChild(wrap);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return wrap;
+  }
+
+  function addTypingIndicator(){
+    const wrap = document.createElement('div');
+    wrap.className = 'msg assistant';
+    wrap.id = 'typingIndicator';
+    wrap.innerHTML = `
+      <div class="msg-avatar">F</div>
+      <div class="msg-body"><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div></div>`;
+    messagesInner.appendChild(wrap);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function removeTypingIndicator(){
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+  }
+
+  function renderSources(sources){
+    if (!sources || !sources.length) return '';
+    const chips = sources.map(s => {
+      const label = s.source ? escapeHtml(s.source) : 'source';
+      const page = (s.page !== undefined && s.page !== null) ? s.page : '?';
+      return `<span class="source-chip"><span class="tag">p.${escapeHtml(String(page))}</span>${label}</span>`;
+    }).join('');
+    return `<div class="sources">${chips}</div>`;
+  }
+
+  async function sendQuestion(){
+    const question = composerInput.value.trim();
+    if (!question || state.busy) return;
+
+    addMessage('user', `<div class="bubble">${escapeHtml(question)}</div>`);
+    composerInput.value = '';
+    composerInput.style.height = 'auto';
+    state.busy = true;
+    sendBtn.disabled = true;
+    addTypingIndicator();
+
+    try {
+      const res = await fetch(state.apiBase + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, session_id: state.docInfo && state.docInfo.session_id })
+      });
+      if (!res.ok) throw new Error('Chat request failed (' + res.status + ')');
+      const data = await res.json();
+      removeTypingIndicator();
+      addMessage('assistant', `<div class="bubble">${escapeHtml(data.answer || 'No answer returned.')}</div>${renderSources(data.sources)}`);
+      setStatus('ready', 'Indexed');
+    } catch (err) {
+      removeTypingIndicator();
+      addMessage('assistant', `<div class="bubble demo"><span class="demo-flag">Demo answer — backend unreachable</span>This is a placeholder response so you can preview the interface. Connect the API base URL in "Backend connection" to a running server exposing <span class="mono">/upload</span> and <span class="mono">/chat</span> to get real, grounded answers.</div>`);
+      setStatus('error', 'Backend unreachable');
+    } finally {
+      state.busy = false;
+      sendBtn.disabled = false;
+      composerInput.focus();
+    }
+  }
+
+  sendBtn.addEventListener('click', sendQuestion);
+  composerInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendQuestion();
+    }
+  });
+  composerInput.addEventListener('input', () => {
+    composerInput.style.height = 'auto';
+    composerInput.style.height = Math.min(composerInput.scrollHeight, 140) + 'px';
+  });
+
+})();
+</script>
+
+</body>
+</html>
