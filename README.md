@@ -1,4 +1,4 @@
-# Folio — PDF RAG Chatbot
+# PDFChat — PDF RAG Chatbot
 
 Ask questions about any PDF and get answers grounded in the document itself, with
 page-level citations. Upload a PDF through the web interface, and the app chunks,
